@@ -24,7 +24,8 @@ def create_main_window():
     # Buttons
     tk.Button(root, text="Camera Calibration", command=lambda: run_tool(camera_calibration)).pack(pady=10)
     tk.Button(root, text="Projector Calibration", command=lambda: run_tool(projector_calibration)).pack(pady=10)
-    tk.Button(root, text="Georeference Image", command=lambda: GeoreferencingApp().root.mainloop()).pack(pady=10)
+    tk.Button(root, text="Georeference Image", command=lambda: GeoreferencingApp(master=root)).pack(pady=10)
+
     tk.Button(root, text="Exit", command=root.destroy).pack(pady=10)
 
     root.mainloop()
