@@ -1,1 +1,7 @@
 venv/
+# Ignore all __pycache__ folders recursively
+__pycache__/
+
+# Ignore contents of images/georeferenced but keep the folder itself
+images/georeferenced/*
+!images/georeferenced/.gitkeep
