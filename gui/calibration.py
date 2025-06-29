@@ -5,6 +5,7 @@ import sys
 from gui.camera import launch_camera_window
 from gui.projector import launch_projector_window
 from gui.georeference import launch_georeference_window
+from gui.database import launch_database_window
 
 
 class CalibrationWindow:
@@ -69,7 +70,8 @@ class CalibrationWindow:
 
 
     def setup_database(self):
-        messagebox.showinfo("Setup", "Database setup (placeholder)")
+        self.master.destroy()
+        launch_database_window() 
 
     def camera_calibration(self):
         self.master.destroy()
