@@ -6,6 +6,7 @@ from gui.camera import launch_camera_window
 from gui.projector import launch_projector_window
 from gui.georeference import launch_georeference_window
 from gui.database import launch_database_window
+from gui.full_setup import launch_full_setup_wizard
 
 
 class CalibrationWindow:
@@ -85,8 +86,6 @@ class CalibrationWindow:
         self.master.destroy()
         launch_georeference_window()
 
-    def full_setup(self):
-        messagebox.showinfo("Setup", "Full setup wizard (placeholder)")
 
 def launch_calibration_window():
     root = tk.Tk()
