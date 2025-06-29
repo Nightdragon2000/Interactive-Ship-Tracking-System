@@ -3,6 +3,7 @@ from tkinter import messagebox
 import subprocess
 import sys
 from gui.camera import launch_camera_window
+from gui.projector import launch_projector_window
 
 class CalibrationWindow:
     def __init__(self, master):
@@ -73,7 +74,8 @@ class CalibrationWindow:
         launch_camera_window()
 
     def projector_calibration(self):
-        messagebox.showinfo("Setup", "Projector calibration (placeholder)")
+        self.master.destroy()
+        launch_projector_window()
 
     def georeference_image(self):
         messagebox.showinfo("Setup", "Georeference image (placeholder)")

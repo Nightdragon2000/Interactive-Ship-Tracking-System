@@ -119,3 +119,6 @@ def projector_calibration():
         pygame.display.flip()
 
     pygame.quit()
+
+if __name__ == "__main__":
+    projector_calibration()
