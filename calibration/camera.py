@@ -109,3 +109,6 @@ def camera_calibration():
 
     cap.release()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    camera_calibration()
