@@ -4,6 +4,8 @@ import subprocess
 import sys
 from gui.camera import launch_camera_window
 from gui.projector import launch_projector_window
+from gui.georeference import launch_georeference_window
+
 
 class CalibrationWindow:
     def __init__(self, master):
@@ -77,8 +79,9 @@ class CalibrationWindow:
         self.master.destroy()
         launch_projector_window()
 
-    def georeference_image(self):
-        messagebox.showinfo("Setup", "Georeference image (placeholder)")
+    def georeference_image(self):        
+        self.master.destroy()
+        launch_georeference_window()
 
     def full_setup(self):
         messagebox.showinfo("Setup", "Full setup wizard (placeholder)")

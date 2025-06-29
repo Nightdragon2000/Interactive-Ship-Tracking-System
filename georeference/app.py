@@ -15,7 +15,6 @@ warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
 class GeoreferencingApp:
     def __init__(self, master=None):
         if master:
-            master.withdraw()
             self.parent = master
         else:
             self.parent = None
@@ -238,4 +237,10 @@ class GeoreferencingApp:
                 return
         self.root.destroy()
         if self.parent:
-            self.parent.deiconify()
+            self.parent.destroy()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()  # Hide the default root window
+    app = GeoreferencingApp(master=root)
+    app.root.mainloop()
