@@ -6,20 +6,21 @@ from gui.camera import launch_camera_window
 from gui.projector import launch_projector_window
 from gui.georeference import launch_georeference_window
 from gui.database import launch_database_window
-from gui.full_setup import launch_full_setup_wizard
+
+
 
 
 class CalibrationWindow:
     def __init__(self, master):
         self.master = master
         self.master.title("Setup & Calibration")
-        self.master.geometry("600x520")
+        self.master.geometry("600x560")
         self.master.resizable(False, False)
         self.master.configure(bg="#e8f0f2")
         self.create_widgets()
 
     def create_widgets(self):
-        # Back button (top-left arrow only)
+        # Back button (top-left)
         btn_back = tk.Button(self.master, text="← Go Back", command=self.back_to_main,
                              font=("Helvetica", 14), bg="#e8f0f2", fg="#1f3b4d",
                              bd=0, highlightthickness=0,
@@ -30,7 +31,7 @@ class CalibrationWindow:
         # Title
         title = tk.Label(self.master, text="Setup & Calibration",
                          font=("Helvetica", 20, "bold"), bg="#e8f0f2", fg="#1f3b4d")
-        title.pack(pady=(50, 10))  # Lower to avoid back button
+        title.pack(pady=(50, 10))
 
         # Subtitle
         subtitle = tk.Label(self.master, text="Choose a configuration option",
@@ -56,23 +57,32 @@ class CalibrationWindow:
         # Setup options
         options = [
             ("Setup Database", self.setup_database),
+            ("Georeference Image", self.georeference_image),
             ("Camera Calibration", self.camera_calibration),
             ("Projector Calibration", self.projector_calibration),
-            ("Georeference Image", self.georeference_image),
-            ("Full Setup Wizard", self.full_setup),
         ]
 
         for text, command in options:
             tk.Button(button_frame, text=text, command=command, **btn_style).pack(pady=7)
 
+        # First-time user guidance (styled note)
+        note_frame = tk.Frame(self.master, bg="#d9edf7", bd=2, relief="solid")
+        note_frame.pack(padx=40, pady=(20, 10), fill="x")
+
+        note_label = tk.Label(note_frame,
+                              text="💡 Tip: If this is your first time running the program,\nplease complete all the above steps in order.",
+                              font=("Helvetica", 10, "italic"),
+                              bg="#d9edf7", fg="#31708f", justify="center", wraplength=480)
+        note_label.pack(padx=10, pady=10)
+
     def back_to_main(self):
         self.master.destroy()
-        subprocess.Popen([sys.executable, "launcher.py"])
-
+        from gui.start import launch_start_window  # ✅ Import here to avoid circular import
+        launch_start_window()
 
     def setup_database(self):
         self.master.destroy()
-        launch_database_window() 
+        launch_database_window()
 
     def camera_calibration(self):
         self.master.destroy()
@@ -82,7 +92,7 @@ class CalibrationWindow:
         self.master.destroy()
         launch_projector_window()
 
-    def georeference_image(self):        
+    def georeference_image(self):
         self.master.destroy()
         launch_georeference_window()
 

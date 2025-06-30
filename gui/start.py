@@ -1,6 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox
 from gui.calibration import launch_calibration_window
+import subprocess
+import sys
+import os
+from serial.tools import list_ports  # For AIS detection
+import signal
+from gui.monitor_selector import select_monitor
+import subprocess
+
 
 
 class StartWindow:
@@ -10,6 +18,7 @@ class StartWindow:
         self.master.geometry("600x400")
         self.master.resizable(False, False)
         self.master.configure(bg="#e8f0f2")
+        
         self.create_widgets()
 
     def create_widgets(self):
@@ -58,8 +67,70 @@ class StartWindow:
                           font=("Helvetica", 9, "italic"), bg="#e8f0f2", fg="#666")
         footer.pack(side="bottom", pady=15)
 
+    def is_ais_receiver_connected(self):
+        ports = list_ports.comports()
+        return any("AIS" in (port.description or "") or "USB" in (port.description or "") for port in ports)
+
+    
     def run_main_app(self):
-        messagebox.showinfo("Main App", "This will launch the main system.\n(Insert your logic here)")
+        from gui.monitor_selector import select_monitor
+
+        def on_monitor_selected(monitor_index):
+            main_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'main.py'))
+            decode_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'decode_ais.py'))
+            self.decode_proc = None
+
+            env = os.environ.copy()
+            env["SDL_VIDEO_FULLSCREEN_DISPLAY"] = str(monitor_index)
+            print(f"[DEBUG] Launching main.py with SDL_VIDEO_FULLSCREEN_DISPLAY={monitor_index}")
+
+            if self.is_ais_receiver_connected():
+                try:
+                    messagebox.showinfo("Running with AIS", "Launching the system with AIS integration...")
+
+                    # ✅ Launch decode_ais.py in new terminal, store process
+                    self.decode_proc = subprocess.Popen(
+                        [sys.executable, decode_script],
+                        creationflags=subprocess.CREATE_NEW_CONSOLE
+                    )
+
+                    # ✅ Launch main application
+                    self.main_proc = subprocess.Popen([sys.executable, main_script], env=env)
+
+                except Exception as e:
+                    messagebox.showerror("Launch Error", f"Failed to launch with AIS:\n{e}")
+                    return
+            else:
+                proceed = messagebox.askyesno(
+                    "AIS Receiver Not Found",
+                    "No AIS receiver detected.\n\nDo you want to continue without AIS?"
+                )
+                if not proceed:
+                    return
+
+                try:
+                    messagebox.showinfo("Running without AIS", "Launching the system without AIS integration...")
+                    self.main_proc = subprocess.Popen([sys.executable, main_script], env=env)
+                except Exception as e:
+                    messagebox.showerror("Launch Error", f"Failed to launch main.py:\n{e}")
+                    return
+
+            self.master.destroy()
+
+            # ✅ Wait for main.py to finish, then terminate decode_ais.py cleanly
+            self.main_proc.wait()
+            if self.decode_proc:
+                try:
+                    self.decode_proc.terminate()
+                    self.decode_proc.wait(timeout=5)
+                except Exception as e:
+                    print(f"[WARNING] Failed to terminate decode_ais.py: {e}")
+
+        # 👇 Show monitor selection before launching the app
+        select_monitor(on_monitor_selected)
+
+
+   
 
     def open_configurator(self):
         self.master.destroy()
@@ -75,7 +146,7 @@ class StartWindow:
             "▶ Use 'Run Main Application' to:\n"
             "• Project data onto the physical model\n"
             "• Interact using webcam\n"
-            "• View AIS data\n\n"
+            "• View AIS data (if receiver is connected)\n\n"
             "Contact Afroditi Kalantzi for support."
         )
         messagebox.showinfo("Help", help_text)

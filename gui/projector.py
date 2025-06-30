@@ -54,32 +54,40 @@ class ProjectorCalibrationWindow:
         
 
     def run_calibration(self):
-        try:
-            self.master.destroy()  # Close the current window
+        from gui.monitor_selector import select_monitor
 
-            # Resolve path
-            project_root = os.path.dirname(os.path.dirname(__file__))
-            script_path = os.path.join(project_root, "calibration", "projector.py")
-            if not os.path.exists(script_path):
-                raise FileNotFoundError(f"{script_path} does not exist.")
+        def on_monitor_selected(monitor_index):
+            try:
+                self.master.destroy()
 
-            # Run the external projector calibration tool
-            subprocess.run([sys.executable, script_path])
+                # Prepare environment and run calibration script with monitor index
+                project_root = os.path.dirname(os.path.dirname(__file__))
+                script_path = os.path.join(project_root, "calibration", "projector.py")
+                if not os.path.exists(script_path):
+                    raise FileNotFoundError(f"{script_path} does not exist.")
 
-            # Reopen the window and ensure it's not minimized
-            import tkinter as tk
-            from gui.projector import ProjectorCalibrationWindow
+                env = os.environ.copy()
+                env["SDL_VIDEO_FULLSCREEN_DISPLAY"] = str(monitor_index)
 
-            root = tk.Tk()
-            app = ProjectorCalibrationWindow(root)
-            root.update_idletasks()
-            root.deiconify()
-            root.lift()
-            root.focus_force()
-            root.mainloop()
+                print(f"[DEBUG] Launching calibration with SDL_VIDEO_FULLSCREEN_DISPLAY={monitor_index}")
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not run projector calibration:\n{e}")
+
+                subprocess.run([sys.executable, script_path], env=env)
+
+                # Relaunch calibration window
+                import tkinter as tk
+                from gui.projector import ProjectorCalibrationWindow
+                root = tk.Tk()
+                app = ProjectorCalibrationWindow(root)
+                root.mainloop()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not run projector calibration:\n{e}")
+
+        # Show monitor selection GUI
+        select_monitor(on_monitor_selected)
+
+
             
     def go_back(self):
         self.master.destroy()

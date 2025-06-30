@@ -1,10 +1,50 @@
+import os
+import sys
+
+# Set SDL display environment early for Pygame
+monitor_index = os.environ.get("SDL_VIDEO_FULLSCREEN_DISPLAY", "0")
+print(f"[DEBUG] SDL_VIDEO_FULLSCREEN_DISPLAY (before pygame import): {monitor_index}")
+os.environ["SDL_VIDEO_FULLSCREEN_DISPLAY"] = monitor_index  # Always set explicitly before pygame
+
 import pygame
 import rasterio
 import numpy as np
-import os
 import json
 from tkinter import filedialog, messagebox
 
+import ctypes
+from ctypes import wintypes
+
+# ─── SAFER MONITOR WINDOW PLACEMENT (Windows only) ──────────────────────────────
+def move_window_to_monitor(window, monitor_index):
+    """Moves the Pygame window to the correct monitor using real screen coordinates (Windows only)."""
+    hwnd = pygame.display.get_wm_info()['window']
+
+    user32 = ctypes.windll.user32
+    MONITORINFOF_PRIMARY = 1
+
+    monitor_enum_proc = ctypes.WINFUNCTYPE(
+        ctypes.c_int, wintypes.HMONITOR, wintypes.HDC,
+        ctypes.POINTER(wintypes.RECT), ctypes.c_double
+    )
+
+    monitors = []
+
+    def _monitor_enum(hMonitor, hdcMonitor, lprcMonitor, dwData):
+        r = lprcMonitor.contents
+        monitors.append((r.left, r.top, r.right - r.left, r.bottom - r.top))
+        return 1
+
+    user32.EnumDisplayMonitors(0, 0, monitor_enum_proc(_monitor_enum), 0)
+
+    if monitor_index >= len(monitors):
+        monitor_index = 0  # fallback to primary
+
+    left, top, width, height = monitors[monitor_index]
+    user32.MoveWindow(hwnd, left, top, width, height, True)
+    print(f"[DEBUG] Moved window to monitor {monitor_index} at ({left}, {top}, {width}, {height})")
+
+# ─── COORDINATE SAVE ────────────────────────────────────────────────────────────
 def save_coordinates(projector_coordinates=None):
     path = os.path.join(os.path.dirname(__file__), 'coordinates.json')
     data = {}
@@ -22,6 +62,7 @@ def save_coordinates(projector_coordinates=None):
         json.dump(data, f, indent=4)
     print("Projector coordinates saved.")
 
+# ─── MAIN CALIBRATION FUNCTION ──────────────────────────────────────────────────
 def projector_calibration():
     georef_path = filedialog.askopenfilename(title="Select GeoTIFF Image",
                                              filetypes=[("GeoTIFF files", "*.tif")])
@@ -50,8 +91,18 @@ def projector_calibration():
     pygame.init()
     pygame.font.init()
 
-    screen_info = pygame.display.Info()
-    screen = pygame.display.set_mode((screen_info.current_w, screen_info.current_h), pygame.FULLSCREEN)
+    num_displays = pygame.display.get_num_displays()
+    print(f"[DEBUG] Number of displays available: {num_displays}")
+
+    desktops = pygame.display.get_desktop_sizes()
+    print(f"[DEBUG] Desktop sizes per display: {desktops}")
+
+    monitor_index = int(os.environ.get("SDL_VIDEO_FULLSCREEN_DISPLAY", 0))
+    screen_width, screen_height = desktops[monitor_index]
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
+
+    move_window_to_monitor(screen, monitor_index)
+
     pygame.display.set_caption("Projector Calibration")
 
     try:
