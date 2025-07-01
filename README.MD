@@ -32,8 +32,6 @@ This script will:
 - Install required dependencies from `requirements.txt`
 - Launch the main graphical interface (`launcher.py`)
 
----
-
 ### Regular Use
 
 After the first-time setup, you can run the system using:
