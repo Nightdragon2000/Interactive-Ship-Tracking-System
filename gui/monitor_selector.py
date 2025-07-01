@@ -2,8 +2,13 @@
 
 import tkinter as tk
 from tkinter import ttk
+from gui.gui_components import create_header, create_main_button
 
 def select_monitor(callback):
+    """
+    Show a popup to let user choose which monitor to use for projection.
+    Calls the callback with the selected monitor index.
+    """
     try:
         import pygame
         pygame.init()
@@ -19,17 +24,15 @@ def select_monitor(callback):
 
     root = tk.Toplevel()
     root.title("Select Display Monitor")
-    root.geometry("350x180")
+    root.geometry("350x200")
     root.configure(bg="#e8f0f2")
     root.resizable(False, False)
 
-    title = tk.Label(root, text="Choose Monitor for Projection",
-                     font=("Helvetica", 14, "bold"), bg="#e8f0f2", fg="#1f3b4d")
-    title.pack(pady=(20, 10))
+    create_header(root, "Choose Monitor")
 
     monitor_var = tk.IntVar(value=0)
-
     options = [f"Monitor {i + 1}" for i in range(monitor_count)]
+
     combo = ttk.Combobox(root, values=options, state="readonly", font=("Helvetica", 11))
     combo.current(0)
     combo.pack(pady=10)
@@ -39,10 +42,6 @@ def select_monitor(callback):
 
     combo.bind("<<ComboboxSelected>>", on_combo_change)
 
-    btn = tk.Button(root, text="Confirm",
-                    font=("Helvetica", 11), bg="#4a90e2", fg="white",
-                    activebackground="#357ABD", activeforeground="white",
-                    command=submit_selection)
-    btn.pack(pady=(10, 20))
+    create_main_button(root, "Confirm", submit_selection).pack(pady=(10, 20))
 
-    root.grab_set()  # Make this window modal
+    root.grab_set()  # Makes this window modal

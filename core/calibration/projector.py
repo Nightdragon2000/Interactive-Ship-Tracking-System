@@ -1,27 +1,36 @@
 import os
-import sys
-
-# Set SDL display environment early for Pygame
-monitor_index = os.environ.get("SDL_VIDEO_FULLSCREEN_DISPLAY", "0")
-print(f"[DEBUG] SDL_VIDEO_FULLSCREEN_DISPLAY (before pygame import): {monitor_index}")
-os.environ["SDL_VIDEO_FULLSCREEN_DISPLAY"] = monitor_index  # Always set explicitly before pygame
-
-import pygame
-import rasterio
-import numpy as np
 import json
-from tkinter import filedialog, messagebox
-
 import ctypes
 from ctypes import wintypes
+from tkinter import filedialog, messagebox
+import numpy as np
+import pygame
+import rasterio
 
-# ─── SAFER MONITOR WINDOW PLACEMENT (Windows only) ──────────────────────────────
+COORDS_FILE = os.path.join(os.path.dirname(__file__), 'coordinates.json')
+MONITOR_INDEX = int(os.environ.get("SDL_VIDEO_FULLSCREEN_DISPLAY", "0"))
+
+def save_coordinates(projector_coordinates=None):
+    data = {}
+    if os.path.exists(COORDS_FILE):
+        try:
+            with open(COORDS_FILE, 'r') as f:
+                data = json.load(f)
+        except json.JSONDecodeError:
+            print("Error : JSON file is empty.")
+
+    if projector_coordinates:
+        data['projector'] = projector_coordinates
+
+    with open(COORDS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+    print("Projector coordinates saved.")
+
+# ------- Move Pygame Window To Specific Monitor  -------
 def move_window_to_monitor(window, monitor_index):
-    """Moves the Pygame window to the correct monitor using real screen coordinates (Windows only)."""
     hwnd = pygame.display.get_wm_info()['window']
 
     user32 = ctypes.windll.user32
-    MONITORINFOF_PRIMARY = 1
 
     monitor_enum_proc = ctypes.WINFUNCTYPE(
         ctypes.c_int, wintypes.HMONITOR, wintypes.HDC,
@@ -38,34 +47,14 @@ def move_window_to_monitor(window, monitor_index):
     user32.EnumDisplayMonitors(0, 0, monitor_enum_proc(_monitor_enum), 0)
 
     if monitor_index >= len(monitors):
-        monitor_index = 0  # fallback to primary
+        monitor_index = 0
 
     left, top, width, height = monitors[monitor_index]
     user32.MoveWindow(hwnd, left, top, width, height, True)
-    print(f"[DEBUG] Moved window to monitor {monitor_index} at ({left}, {top}, {width}, {height})")
 
-# ─── COORDINATE SAVE ────────────────────────────────────────────────────────────
-def save_coordinates(projector_coordinates=None):
-    path = os.path.join(os.path.dirname(__file__), 'coordinates.json')
-    data = {}
-    if os.path.exists(path):
-        try:
-            with open(path, 'r') as f:
-                data = json.load(f)
-        except json.JSONDecodeError:
-            print("Warning: JSON file is empty or corrupted.")
-
-    if projector_coordinates:
-        data['projector'] = projector_coordinates
-
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=4)
-    print("Projector coordinates saved.")
-
-# ─── MAIN CALIBRATION FUNCTION ──────────────────────────────────────────────────
+# ------- Main Function -------
 def projector_calibration():
-    georef_path = filedialog.askopenfilename(title="Select GeoTIFF Image",
-                                             filetypes=[("GeoTIFF files", "*.tif")])
+    georef_path = filedialog.askopenfilename(title="Select Image", filetypes=[("GeoTIFF files", "*.tif")])
     if not georef_path or not os.path.exists(georef_path):
         messagebox.showerror("Error", "No image selected.")
         return
@@ -73,7 +62,6 @@ def projector_calibration():
     try:
         with rasterio.open(georef_path) as src:
             image_data = src.read()
-            print(f"Loaded image: {georef_path}")
     except Exception as e:
         messagebox.showerror("Error", f"Cannot open image: {e}")
         return
@@ -91,26 +79,15 @@ def projector_calibration():
     pygame.init()
     pygame.font.init()
 
-    num_displays = pygame.display.get_num_displays()
-    print(f"[DEBUG] Number of displays available: {num_displays}")
-
     desktops = pygame.display.get_desktop_sizes()
-    print(f"[DEBUG] Desktop sizes per display: {desktops}")
-
-    monitor_index = int(os.environ.get("SDL_VIDEO_FULLSCREEN_DISPLAY", 0))
-    screen_width, screen_height = desktops[monitor_index]
+    screen_width, screen_height = desktops[MONITOR_INDEX]
     screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
 
-    move_window_to_monitor(screen, monitor_index)
-
+    move_window_to_monitor(screen, MONITOR_INDEX)
     pygame.display.set_caption("Projector Calibration")
 
-    try:
-        img_original = pygame.surfarray.make_surface(image_data)
-    except Exception as e:
-        messagebox.showerror("Error", f"Cannot create display surface: {e}")
-        pygame.quit()
-        return
+    img_original = pygame.surfarray.make_surface(image_data)
+
 
     img_surface = img_original.copy()
     img_rect = img_surface.get_rect(center=screen.get_rect().center)
@@ -123,6 +100,7 @@ def projector_calibration():
         new_size = (int(surface.get_width() * factor), int(surface.get_height() * factor))
         return pygame.transform.smoothscale(surface, new_size)
 
+    # ------- Main Loop -------
     running = True
     while running:
         for event in pygame.event.get():
@@ -133,7 +111,7 @@ def projector_calibration():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    save_coordinates(projector_coordinates={
+                    save_coordinates({
                         "tl_corner": img_rect.topleft,
                         "br_corner": img_rect.bottomright
                     })
@@ -145,12 +123,12 @@ def projector_calibration():
                     dragging = True
                     offset_x = img_rect.x - event.pos[0]
                     offset_y = img_rect.y - event.pos[1]
-                elif event.button == 4:
+                elif event.button == 4:  # scroll up
                     scale = min(scale * 1.1, 5.0)
                     center = img_rect.center
                     img_surface = scale_image(img_original, scale)
                     img_rect = img_surface.get_rect(center=center)
-                elif event.button == 5:
+                elif event.button == 5:  # scroll down
                     scale = max(scale * 0.9, 0.1)
                     center = img_rect.center
                     img_surface = scale_image(img_original, scale)
@@ -160,10 +138,9 @@ def projector_calibration():
                 if event.button == 1:
                     dragging = False
 
-            elif event.type == pygame.MOUSEMOTION:
-                if dragging:
-                    img_rect.x = event.pos[0] + offset_x
-                    img_rect.y = event.pos[1] + offset_y
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                img_rect.x = event.pos[0] + offset_x
+                img_rect.y = event.pos[1] + offset_y
 
         screen.fill((0, 0, 0))
         screen.blit(img_surface, img_rect)

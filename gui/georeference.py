@@ -1,78 +1,75 @@
+import os
+import sys
 import tkinter as tk
 from tkinter import messagebox
 import subprocess
-import sys
-import os
+
+from gui.gui_components import (
+    create_back_button,
+    create_header,
+    create_instructions,
+    create_main_button
+)
+
 
 class GeoreferenceWindow:
     def __init__(self, master):
         self.master = master
         self.master.title("Georeference Image")
-        self.master.geometry("600x500")
+        self.master.geometry("600x540")
         self.master.resizable(False, False)
         self.master.configure(bg="#e8f0f2")
         self.create_widgets()
 
     def create_widgets(self):
-        # Back button
-        btn_back = tk.Button(self.master, text="← Go Back", command=self.go_back,
-                             font=("Helvetica", 14), bg="#e8f0f2", fg="#1f3b4d",
-                             bd=0, highlightthickness=0,
-                             activebackground="#e8f0f2", activeforeground="#1f3b4d",
-                             cursor="hand2")
-        btn_back.place(x=10, y=10)
+        create_back_button(self.master, self.go_back).place(x=10, y=10)
+        create_header(self.master, "Georeference Image")
 
-        # Title
-        title = tk.Label(self.master, text="Georeference Image",
-                         font=("Helvetica", 20, "bold"), bg="#e8f0f2", fg="#1f3b4d")
-        title.pack(pady=(50, 10))
-
-        # Instructions
-        instructions = (
+        create_instructions(
+            self.master,
             "• Select an image (TIFF, PNG, JPG, etc.).\n"
-            "• Click 4 points on the image and enter their real coordinates.\n"
+            "• Click on 4 points and enter their real coordinates (lat, lon).\n"
+            "• Click on an existing point to edit or delete it.\n"
             "• Drag with Right Click to move the image.\n"
             "• Zoom using the mouse wheel.\n"
-            "• After 4 points, a GeoTIFF will be saved automatically."
+            "• After 4 valid points, the image will be automatically saved as GeoTIFF."
         )
-        instruction_label = tk.Label(self.master, text=instructions,
-                                     font=("Helvetica", 11), bg="#e8f0f2", fg="#333",
-                                     justify="center")
-        instruction_label.pack(padx=30, pady=(0, 40))
 
-        # Run georeference tool
-        btn_run = tk.Button(self.master, text="Start Georeferencing Tool",
-                            command=self.run_georeference,
-                            font=("Helvetica", 11, "bold"),
-                            width=30, height=2,
-                            bg="#4a90e2", fg="white",
-                            activebackground="#357ABD", activeforeground="white",
-                            bd=0, cursor="hand2")
-        btn_run.pack()
+        create_main_button(
+            self.master, "Start Georeferencing Tool", self.run_georeference
+        ).pack(pady=(0, 25))
+
+        # Add tip about the known empty window behavior
+        tip_frame = tk.Frame(self.master, bg="#e8f0f2", bd=1, relief="solid")
+        tip_frame.pack(pady=(0, 20), padx=40)
+
+        tip_label = tk.Label(
+            tip_frame,
+            text="Note: After completing the process, an empty window may appear.\n"
+                 "Please close it manually to return to the main application.",
+            font=("Helvetica", 9, "italic"),
+            bg="#e8f0f2", fg="#007acc",
+            justify="center", wraplength=420
+        )
+        tip_label.pack(padx=10, pady=10)
 
     def run_georeference(self):
         try:
             self.master.destroy()
 
-            # Get absolute path to georeference/app.py
             project_root = os.path.dirname(os.path.dirname(__file__))
-            script_path = os.path.join(project_root, "georeference", "app.py")
+            script_path = os.path.join(project_root, "core", "georeference", "app.py")
 
             if not os.path.exists(script_path):
-                raise FileNotFoundError(f"{script_path} does not exist.")
+                messagebox.showerror("Error", f"{script_path} does not exist.")
+                return
 
             subprocess.run([sys.executable, script_path])
 
-            # Relaunch the window after closing the tool
-            import tkinter as tk
-            from gui.georeference import GeoreferenceWindow
-
+            # Relaunch window after georeferencing closes (even if it fails)
+            from gui.georeference import launch_georeference_window
             root = tk.Tk()
             app = GeoreferenceWindow(root)
-            root.update_idletasks()
-            root.deiconify()
-            root.lift()
-            root.focus_force()
             root.mainloop()
 
         except Exception as e:
