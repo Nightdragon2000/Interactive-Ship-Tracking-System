@@ -64,15 +64,6 @@ Access the in-app help from the launcher. Here's a quick summary:
   - Shows AIS data (if the receiver is detected)
 
 
-
-## Author
-
-**Afroditi Kalantzi**  
-Department of Product and Systems Design Engineering  
-University of the Aegean
-
-
-
 ## License
 
 This project is intended for academic and experimental use.  
